@@ -12,7 +12,7 @@ TEAM_NAME = "name".upper()
 WORKSPACES = "workspaces".upper()
 TEAM_MEMBERS = "members".upper()
 LABELING_JOBS = "labeling jobs".upper()
-TEAM_FILES = "files".upper()
+TEAM_FILES = "team files".upper()
 SELECT = "select".upper()
 
 columns = [TEAM_ID, TEAM_NAME, WORKSPACES, TEAM_MEMBERS, LABELING_JOBS, TEAM_FILES, SELECT]
