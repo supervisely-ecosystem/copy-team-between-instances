@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Copy team from one Supervisely Instance to another (including workspaces, team members and team files)",
   "categories": ["import", "data operations"],
-  "docker_image": "supervisely/base-py-sdk:6.72.124",
+  "docker_image": "supervisely/base-py-sdk:6.72.100",
   "icon": "",
   "poster": "",
   "entrypoint": "python -m uvicorn src.main:app --host 0.0.0.0 --port 8000",
