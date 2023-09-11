@@ -1,5 +1,5 @@
 {
-  "name": "Supervisely Data Mover",
+  "name": "Copy Team between instances",
   "version": "2.0.0",
   "description": "Copy team from one Supervisely Instance to another (including workspaces, team members and team files)",
   "categories": ["import", "data operations"],

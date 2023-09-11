@@ -34,7 +34,6 @@ def build_table(foreign_api: sly.Api):
     lines = []
     table.loading = True
     teams = foreign_api.team.get_list()
-    teams = [foreign_api.team.get_info_by_name("cxnt")]#, foreign_api.team.get_info_by_name("cxnt2")]
     with teams_progress(message="Fetching teams", total=len(teams)) as pbar:
         teams_progress.show()
         for info in teams:
