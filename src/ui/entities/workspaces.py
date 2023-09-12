@@ -62,6 +62,21 @@ def process_images(
                         force_metadata_for_links=False,
                         skip_validation=False,
                     )
+
+                    success = True
+                    for image in res_images:
+                        if image.width is None or image.height is None:
+                            success = False
+                            break
+                    if success is False:
+                        api.image.remove_batch(ids=[image.id for image in res_images])
+                        sly.logger.warn(
+                            "Links are not accessible or invalid. Attempting to download images with paths"
+                        )
+                        raise Exception(
+                            "Links are not accessible or invalid. Attempting to download images with paths"
+                        )
+
                 except Exception:
                     foreign_api.image.download_paths(
                         dataset_id=dataset.id,
@@ -145,7 +160,7 @@ def process_videos(
             except Exception:
                 video_path = os.path.join(storage_dir, video.name)
                 foreign_api.video.download_path(id=video.id, path=video_path)
-                api.video.upload_path(
+                res_video = api.video.upload_path(
                     dataset_id=res_dataset.id,
                     name=video.name,
                     path=video_path,
