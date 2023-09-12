@@ -1,5 +1,5 @@
 <div align="center" markdown>
-<img src="https://github.com/supervisely-ecosystem/copy-team-between-instances/assets/115161827/1456c3a1-1b58-4f9b-a23b-f4b1cce62783" />
+<img src="https://github.com/supervisely-ecosystem/copy-team-between-instances/assets/115161827/89229ad7-7e24-4470-9222-c4502708d15b" />
   
 # Copy team between instances
 
