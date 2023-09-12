@@ -53,14 +53,31 @@ def process_images(
                         images_links.append(link)
 
             if len(images_links) == len(images_batch):
-                res_images = api.image.upload_links(
-                    dataset_id=res_dataset.id,
-                    names=images_names,
-                    links=images_links,
-                    metas=images_metas,
-                    force_metadata_for_links=False,
-                    skip_validation=False,
-                )
+                try:
+                    res_images = api.image.upload_links(
+                        dataset_id=res_dataset.id,
+                        names=images_names,
+                        links=images_links,
+                        metas=images_metas,
+                        force_metadata_for_links=False,
+                        skip_validation=False,
+                    )
+                except Exception:
+                    foreign_api.image.download_paths(
+                        dataset_id=dataset.id,
+                        ids=images_ids,
+                        paths=images_paths,
+                    )
+
+                    res_images = api.image.upload_paths(
+                        dataset_id=res_dataset.id,
+                        names=images_names,
+                        paths=images_paths,
+                        metas=images_metas,
+                    )
+
+                    for p in images_paths:
+                        silent_remove(p)
             else:
                 foreign_api.image.download_paths(
                     dataset_id=dataset.id,
@@ -107,24 +124,25 @@ def process_videos(
         message=f"Importing videos from dataset: {dataset.name}", total=len(videos)
     ) as pbar:
         for video in videos:
-            if video.link is not None and is_fast_mode:
-                link = video.link
-                if need_change_link:
-                    link = change_link(bucket_path, link)
-                res_video = api.video.upload_links(
-                    dataset_id=res_dataset.id,
-                    names=[video.name],
-                    hashes=[video.hash],
-                    links=[link],
-                    infos=[video.file_meta],
-                    metas=[video.meta],
-                )
-                res_video = res_video[0]
-            elif video.hash is not None:
-                res_video = api.video.upload_hash(
-                    dataset_id=res_dataset.id, name=video.name, hash=video.hash
-                )
-            else:
+            try:
+                if video.link is not None and is_fast_mode:
+                    link = video.link
+                    if need_change_link:
+                        link = change_link(bucket_path, link)
+                    res_video = api.video.upload_links(
+                        dataset_id=res_dataset.id,
+                        names=[video.name],
+                        hashes=[video.hash],
+                        links=[link],
+                        infos=[video.file_meta],
+                        metas=[video.meta],
+                    )
+                    res_video = res_video[0]
+                elif video.hash is not None:
+                    res_video = api.video.upload_hash(
+                        dataset_id=res_dataset.id, name=video.name, hash=video.hash
+                    )
+            except Exception:
                 video_path = os.path.join(storage_dir, video.name)
                 foreign_api.video.download_path(id=video.id, path=video_path)
                 api.video.upload_path(

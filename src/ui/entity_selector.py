@@ -413,13 +413,8 @@ def process_import():
     bucket_path = None
     if is_fast_mode:
         change_link_flag = need_link_change.is_checked()
-        if bucket_text_info.get_value() is None:
-            output_message.set(
-                "Please, connect to bucket first or uncheck change link checkbox", status="error"
-            )
-            output_message.show()
-            return
-        is_bucket_connected = bool(bucket_text_info.get_value().startswith("Connected"))
+        bucket_text_value = bucket_text_info.get_value() or ""
+        is_bucket_connected = bool(bucket_text_value.startswith("Connected"))
         if change_link_flag and not is_bucket_connected:
             output_message.set(
                 "Please, connect to bucket first or uncheck change link checkbox", status="error"
