@@ -8,11 +8,11 @@
   <a href="#How-to-Use">How to Use</a>
 </p>
 
-[![](https://img.shields.io/badge/supervisely-ecosystem-brightgreen)](https://ecosystem.supervise.ly/apps/supervisely-ecosystem/copy-team-between-instances)
-[![](https://img.shields.io/badge/slack-chat-green.svg?logo=slack)](https://supervise.ly/slack)
+[![](https://img.shields.io/badge/supervisely-ecosystem-brightgreen)](https://ecosystem.supervise.com/apps/supervisely-ecosystem/copy-team-between-instances)
+[![](https://img.shields.io/badge/slack-chat-green.svg?logo=slack)](https://supervise.com/slack)
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/supervisely-ecosystem/copy-team-between-instances)
-[![views](https://app.supervise.ly/img/badges/views/supervisely-ecosystem/copy-team-between-instances)](https://supervise.ly)
-[![runs](https://app.supervise.ly/img/badges/runs/supervisely-ecosystem/copy-team-between-instances)](https://supervise.ly)
+[![views](https://app.supervise.com/img/badges/views/supervisely-ecosystem/copy-team-between-instances)](https://supervise.com)
+[![runs](https://app.supervise.com/img/badges/runs/supervisely-ecosystem/copy-team-between-instances)](https://supervise.com)
 
 </div>
 
