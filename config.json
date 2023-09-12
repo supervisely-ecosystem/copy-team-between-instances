@@ -4,8 +4,9 @@
   "description": "Copy team from one Supervisely Instance to another (including workspaces, team members and team files)",
   "categories": ["import", "data operations"],
   "docker_image": "supervisely/base-py-sdk:6.72.92",
-  "icon": "",
-  "poster": "",
+  "icon": "https://github.com/supervisely-ecosystem/copy-team-between-instances/assets/115161827/0b291b43-ee75-4aa6-b10e-cf545129c2d2",
+  "icon_cover": true,
+  "poster": "https://github.com/supervisely-ecosystem/copy-team-between-instances/assets/115161827/f4611e23-73b2-4f8b-a4b2-a20f63b24b9f",
   "entrypoint": "python -m uvicorn src.main:app --host 0.0.0.0 --port 8000",
   "port": 8000,
   "task_location": "workspace_tasks"
