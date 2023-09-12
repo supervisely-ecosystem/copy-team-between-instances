@@ -51,27 +51,47 @@ def reveal_token(is_checked: bool):
 @connect_instance.click
 def connect():
     connect_message.hide()
+    sly_token_input.disable()
+    sly_address_input.disable()
 
     if connect_instance.text == "Reselect":
-        sly_token_input.enable()
-        sly_address_input.enable()
         show_token.enable()
         team_selector.card.lock()
         entity_selector.card.lock()
         connect_instance.plain = False
         connect_instance.icon = None
         connect_instance.text = "Connect"
+        sly_token_input.enable()
+        sly_address_input.enable()
         return
 
     # Validate instance address
     server_address = sly_address_input.get_value()
-    if not server_address.startswith("http://") and not server_address.startswith("https://"):
-        connect_message.set(
-            "Supervisely instance address should start with http:// or https://", "error"
-        )
+    if server_address == "" or server_address is None:
+        connect_message.set("Supervisely instance address is empty", "error")
         connect_message.show()
         return
-    server_address = server_address.strip(" ")
+
+    if not server_address.startswith("http://") and not server_address.startswith("https://"):
+        connect_message.set(
+            "Supervisely instance address should start with http:// or https://",
+            "error",
+        )
+        connect_message.show()
+        sly_token_input.enable()
+        sly_address_input.enable()
+        return
+    server_address = server_address.strip(" ").strip("/")
+
+    if server_address == g.api.server_address:
+        connect_message.set(
+            "Provided Supervisely instance address is the same as the current one.",
+            "error",
+        )
+        connect_message.show()
+        sly_token_input.enable()
+        sly_address_input.enable()
+        return
 
     # Validate token
     token = sly_token_input.get_value()
@@ -79,20 +99,24 @@ def connect():
         connect_message.set(
             "Token input is empty"
             "\nYou can find your Supervisely token "
-            f"<a href='{g.foreign_api.server_address}/{token_help_slug}'>here</a>.",
+            f"<a href='{server_address}/{token_help_slug}'>here</a>.",
             "error",
         )
         connect_message.show()
+        sly_token_input.enable()
+        sly_address_input.enable()
         return
 
     if len(token) != 128:
         connect_message.set(
-            "Token length must be 128 symbols",
+            "Token length must be 128 symbols."
             "\nYou can find your Supervisely token "
-            f"<a href='{g.foreign_api.server_address}/{token_help_slug}'>here</a>."
+            f"<a href='{server_address}/{token_help_slug}'>here</a>.",
             "error",
         )
         connect_message.show()
+        sly_token_input.enable()
+        sly_address_input.enable()
         return
 
     # Send request to Supervisely API
@@ -106,16 +130,18 @@ def connect():
                 "Couldn't connect to Supervisely instance. "
                 "Check if server address and token are valid."
                 "\nYou can find your Supervisely token "
-                f"<a href='{g.foreign_api.server_address}/{token_help_slug}'>here</a>."
+                f"<a href='{server_address}/{token_help_slug}'>here</a>."
             ),
             "error",
         )
         connect_message.show()
+        sly_token_input.enable()
+        sly_address_input.enable()
         return
-    
+
     try:
         f_root = g.foreign_api.user.get_info_by_id(1)
-        if root is None:
+        if f_root is None:
             connect_message.set(
                 (
                     "Provided API token doesn't have access to the root user. "
@@ -124,6 +150,8 @@ def connect():
                 "error",
             )
             connect_message.show()
+            sly_token_input.enable()
+            sly_address_input.enable()
             return
     except Exception:
         connect_message.set(
@@ -134,8 +162,10 @@ def connect():
             "error",
         )
         connect_message.show()
+        sly_token_input.enable()
+        sly_address_input.enable()
         return
-        
+
     team_selector.build_table(g.foreign_api)
     team_selector.card.unlock()
     connect_message.set(f"Connected to {g.foreign_api.server_address} as {user.login}", "success")
