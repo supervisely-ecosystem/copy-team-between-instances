@@ -1,2 +1,0 @@
-# supervisely==6.72.124
-git+https://github.com/supervisely/supervisely.git@minor-improvements

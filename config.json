@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Copy team from one Supervisely Instance to another (including workspaces, team members and team files)",
   "categories": ["import", "data operations"],
-  "docker_image": "supervisely/base-py-sdk:6.72.92",
+  "docker_image": "supervisely/import-export:6.72.125",
   "icon": "https://github.com/supervisely-ecosystem/copy-team-between-instances/assets/115161827/8df94db5-8687-407e-b4e9-d69286387f79",
   "icon_cover": true,
   "poster": "https://github.com/supervisely-ecosystem/copy-team-between-instances/assets/115161827/1456c3a1-1b58-4f9b-a23b-f4b1cce62783",
