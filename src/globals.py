@@ -7,6 +7,9 @@ if sly.is_development():
     load_dotenv(os.path.expanduser("~/supervisely.env"))
 
 api: sly.Api = sly.Api()
+# remove x-task-id header
+api.headers.pop("x-task-id", None)
+
 foreign_api: sly.Api = None
 
 team_id = sly.env.team_id()
