@@ -1,4 +1,20 @@
+<div align="center" markdown>
+<img src="https://github.com/supervisely-ecosystem/copy-team-between-instances/assets/115161827/1456c3a1-1b58-4f9b-a23b-f4b1cce62783" />
+  
 # Copy team between instances
+
+<p align="center">
+  <a href="#Introduction">Introduction</a> •
+  <a href="#How-to-Use">How to Use</a>
+</p>
+
+[![](https://img.shields.io/badge/supervisely-ecosystem-brightgreen)](https://ecosystem.supervise.ly/apps/supervisely-ecosystem/copy-team-between-instances)
+[![](https://img.shields.io/badge/slack-chat-green.svg?logo=slack)](https://supervise.ly/slack)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/supervisely-ecosystem/copy-team-between-instances)
+[![views](https://app.supervise.ly/img/badges/views/supervisely-ecosystem/copy-team-between-instances)](https://supervise.ly)
+[![runs](https://app.supervise.ly/img/badges/runs/supervisely-ecosystem/copy-team-between-instances)](https://supervise.ly)
+
+</div>
 
 # Introduction
 
