@@ -11,5 +11,4 @@ api: sly.Api = sly.Api()
 api.headers.pop("x-task-id", None)
 
 foreign_api: sly.Api = None
-
 team_id = sly.env.team_id()

@@ -20,6 +20,32 @@ def change_link(bucket_path: str, link: str):
     return f"{bucket_path}{parsed_url.path}"
 
 
+def download_upload_images(
+    foreign_api: sly.Api,
+    api: sly.Api,
+    dataset: DatasetInfo,
+    res_dataset: DatasetInfo,
+    images_ids: List[int],
+    images_paths: List[str],
+    images_names: List[str],
+    images_metas: List[dict],
+):
+    foreign_api.image.download_paths(
+        dataset_id=dataset.id,
+        ids=images_ids,
+        paths=images_paths,
+    )
+    res_images = api.image.upload_paths(
+        dataset_id=res_dataset.id,
+        names=images_names,
+        paths=images_paths,
+        metas=images_metas,
+    )
+    for p in images_paths:
+        silent_remove(p)
+    return res_images
+
+
 def process_images(
     api: sly.Api,
     foreign_api: sly.Api,
@@ -78,37 +104,27 @@ def process_images(
                         )
 
                 except Exception:
-                    foreign_api.image.download_paths(
-                        dataset_id=dataset.id,
-                        ids=images_ids,
-                        paths=images_paths,
+                    res_images = download_upload_images(
+                        foreign_api,
+                        api,
+                        dataset,
+                        res_dataset,
+                        images_ids,
+                        images_paths,
+                        images_names,
+                        images_metas,
                     )
-
-                    res_images = api.image.upload_paths(
-                        dataset_id=res_dataset.id,
-                        names=images_names,
-                        paths=images_paths,
-                        metas=images_metas,
-                    )
-
-                    for p in images_paths:
-                        silent_remove(p)
             else:
-                foreign_api.image.download_paths(
-                    dataset_id=dataset.id,
-                    ids=images_ids,
-                    paths=images_paths,
+                res_images = download_upload_images(
+                    foreign_api,
+                    api,
+                    dataset,
+                    res_dataset,
+                    images_ids,
+                    images_paths,
+                    images_names,
+                    images_metas,
                 )
-
-                res_images = api.image.upload_paths(
-                    dataset_id=res_dataset.id,
-                    names=images_names,
-                    paths=images_paths,
-                    metas=images_metas,
-                )
-
-                for p in images_paths:
-                    silent_remove(p)
 
             res_images_ids = [image.id for image in res_images]
             annotations = foreign_api.annotation.download_json_batch(
@@ -144,13 +160,8 @@ def process_videos(
                     link = video.link
                     if need_change_link:
                         link = change_link(bucket_path, link)
-                    res_video = api.video.upload_links(
-                        dataset_id=res_dataset.id,
-                        names=[video.name],
-                        hashes=[video.hash],
-                        links=[link],
-                        infos=[video.file_meta],
-                        metas=[video.meta],
+                    res_video = api.video.upload_link(
+                        dataset_id=res_dataset.id, link=link, name=video.name, skip_download=True
                     )
                     res_video = res_video[0]
                 elif video.hash is not None:
