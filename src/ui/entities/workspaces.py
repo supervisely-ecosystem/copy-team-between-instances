@@ -163,7 +163,6 @@ def process_videos(
                     res_video = api.video.upload_link(
                         dataset_id=res_dataset.id, link=link, name=video.name, skip_download=True
                     )
-                    res_video = res_video[0]
                 elif video.hash is not None:
                     res_video = api.video.upload_hash(
                         dataset_id=res_dataset.id, name=video.name, hash=video.hash
