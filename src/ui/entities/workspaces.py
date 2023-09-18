@@ -46,6 +46,29 @@ def download_upload_images(
     return res_images
 
 
+def download_upload_video(
+    foreign_api: sly.Api,
+    api: sly.Api,
+    video: VideoInfo,
+    res_dataset: DatasetInfo,
+    storage_dir: str,
+    meta: sly.ProjectMeta,
+    key_id_map: KeyIdMap,
+):
+    video_path = os.path.join(storage_dir, video.name)
+    foreign_api.video.download_path(id=video.id, path=video_path)
+    res_video = api.video.upload_path(
+        dataset_id=res_dataset.id,
+        name=video.name,
+        path=video_path,
+        meta=video.meta,
+    )
+    silent_remove(video_path)
+    ann_json = foreign_api.video.annotation.download(video_id=video.id)
+    ann = sly.VideoAnnotation.from_json(data=ann_json, project_meta=meta, key_id_map=key_id_map)
+    api.video.annotation.append(video_id=res_video.id, ann=ann, key_id_map=key_id_map)
+
+
 def process_images(
     api: sly.Api,
     foreign_api: sly.Api,
@@ -154,36 +177,50 @@ def process_videos(
     with progress_items(
         message=f"Importing videos from dataset: {dataset.name}", total=len(videos)
     ) as pbar:
-        for video in videos:
+        for videos_batch in batched(videos, BATCH_SIZE):
+            videos_names = [video.name for video in videos_batch]
             try:
-                if video.link is not None and is_fast_mode:
-                    link = video.link
-                    if need_change_link:
-                        link = change_link(bucket_path, link)
-                    res_video = api.video.upload_link(
-                        dataset_id=res_dataset.id, link=link, name=video.name, skip_download=True
+                if is_fast_mode:
+                    if len(videos_links) == len(videos_batch):
+                        videos_links = [video.link for video in videos_batch]
+                        res_links = []
+                        for link in videos_links:
+                            if need_change_link:
+                                link = change_link(bucket_path, link)
+                                res_links.append(link)
+                        if len(res_links) == len(videos_links):
+                            videos_links = res_links
+                        res_videos = api.video.upload_links(
+                            dataset_id=res_dataset.id,
+                            links=videos_links,
+                            names=videos_names,
+                            skip_download=True,
+                        )
+                elif len(videos_hashes) == len(videos_batch):
+                    videos_hashes = [video.hash for video in videos_batch]
+                    res_videos = api.video.upload_hashes(
+                        dataset_id=res_dataset.id, name=videos_names, hash=videos_hashes
                     )
-                elif video.hash is not None:
-                    res_video = api.video.upload_hash(
-                        dataset_id=res_dataset.id, name=video.name, hash=video.hash
+                for video in res_videos:
+                    ann_json = foreign_api.video.annotation.download(video_id=video.id)
+                    ann = sly.VideoAnnotation.from_json(
+                        data=ann_json, project_meta=meta, key_id_map=key_id_map
                     )
-            except Exception:
-                video_path = os.path.join(storage_dir, video.name)
-                foreign_api.video.download_path(id=video.id, path=video_path)
-                res_video = api.video.upload_path(
-                    dataset_id=res_dataset.id,
-                    name=video.name,
-                    path=video_path,
-                    meta=video.meta,
-                )
-                silent_remove(video_path)
+                    api.video.annotation.append(video_id=video.id, ann=ann, key_id_map=key_id_map)
+                pbar.update(len(videos_batch))
 
-            ann_json = foreign_api.video.annotation.download(video_id=video.id)
-            ann = sly.VideoAnnotation.from_json(
-                data=ann_json, project_meta=meta, key_id_map=key_id_map
-            )
-            api.video.annotation.append(video_id=res_video.id, ann=ann, key_id_map=key_id_map)
-            pbar.update()
+            except Exception:
+                for video in videos_batch:
+                    download_upload_video(
+                        foreign_api,
+                        api,
+                        video,
+                        res_dataset,
+                        storage_dir,
+                        meta,
+                        key_id_map,
+                    )
+                    pbar.update()
 
 
 def process_volumes(
