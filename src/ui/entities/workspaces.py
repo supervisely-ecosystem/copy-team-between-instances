@@ -207,7 +207,7 @@ def process_videos(
                         data=ann_json, project_meta=meta, key_id_map=key_id_map
                     )
                     api.video.annotation.append(video_id=video.id, ann=ann, key_id_map=key_id_map)
-                pbar.update(len(videos_batch))
+                    pbar.update()
 
             except Exception:
                 for video in videos_batch:
