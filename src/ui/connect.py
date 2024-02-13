@@ -139,32 +139,32 @@ def connect():
         sly_address_input.enable()
         return
 
-    try:
-        f_root = g.foreign_api.user.get_info_by_id(1)
-        if f_root is None:
-            connect_message.set(
-                (
-                    "Provided API token doesn't have access to the root user. "
-                    "Please, provide token with root access."
-                ),
-                "error",
-            )
-            connect_message.show()
-            sly_token_input.enable()
-            sly_address_input.enable()
-            return
-    except Exception:
-        connect_message.set(
-            (
-                "Provided API token doesn't have access to the root user. "
-                "Please, provide token with root access."
-            ),
-            "error",
-        )
-        connect_message.show()
-        sly_token_input.enable()
-        sly_address_input.enable()
-        return
+    # try:
+    #     f_root = g.foreign_api.user.get_info_by_id(1)
+    #     if f_root is None:
+    #         connect_message.set(
+    #             (
+    #                 "Provided API token doesn't have access to the root user. "
+    #                 "Please, provide token with root access."
+    #             ),
+    #             "error",
+    #         )
+    #         connect_message.show()
+    #         sly_token_input.enable()
+    #         sly_address_input.enable()
+    #         return
+    # except Exception:
+    #     connect_message.set(
+    #         (
+    #             "Provided API token doesn't have access to the root user. "
+    #             "Please, provide token with root access."
+    #         ),
+    #         "error",
+    #     )
+    #     connect_message.show()
+    #     sly_token_input.enable()
+    #     sly_address_input.enable()
+    #     return
 
     team_selector.build_table(g.foreign_api)
     team_selector.card.unlock()
