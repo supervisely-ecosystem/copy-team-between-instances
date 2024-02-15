@@ -33,6 +33,8 @@ def retyr_if_end_stream(func):
                     raise e
                 sly.logger.warn(f"EndOfStream exception. Retrying... {i + 1}/5")
                 time.sleep(2)
+    
+    return wrapper
             
 
 
