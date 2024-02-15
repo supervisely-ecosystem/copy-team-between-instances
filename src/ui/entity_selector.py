@@ -488,6 +488,6 @@ def process_import():
         import_progress_4.hide()
         output_message.show()
     except Exception as e:
-        output_message.set(text="Error occurred during. Please restart the app.", status="error")
+        output_message.set(text="Error occurred during import process. Please restart the app.", status="error")
         output_message.show()
         raise e
