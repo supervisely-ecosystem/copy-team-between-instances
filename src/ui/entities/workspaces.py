@@ -492,9 +492,10 @@ def import_workspaces(
                 message=f"Importing projects from workspace: {workspace.name}", total=len(projects)
             ) as pbar_pr:
                 for project in projects:
+                    temp_ws_collision = ws_collision_value
                     res_project = api.project.get_info_by_name(res_workspace.id, project.name)
-                    if res_project is not None and res_project.type != str(sly.ProjectType.IMAGES) and ws_collision_value == "check":
-                        ws_collision_value = "reupload"
+                    if res_project is not None and res_project.type != str(sly.ProjectType.IMAGES) and temp_ws_collision == "check":
+                        temp_ws_collision = "reupload"
                         sly.logger.info("Changing collision value to 'reupload' for non-image projects.")
                     if res_project is None:
                         res_project = api.project.create(
@@ -503,7 +504,7 @@ def import_workspaces(
                             description=project.description,
                             type=project.type,
                         )
-                    elif res_project is not None and ws_collision_value == "reupload":
+                    elif res_project is not None and temp_ws_collision == "reupload":
                         api.project.remove(res_project.id)
                         res_project = api.project.create(
                             res_workspace.id,
@@ -512,12 +513,12 @@ def import_workspaces(
                             type=project.type,
                         )
                     
-                    elif res_project is not None and ws_collision_value == "ignore":
+                    elif res_project is not None and temp_ws_collision == "ignore":
                         sly.logger.info(f"Project {project.name} already exists in destination workspace. Skipping...")
                         pbar_pr.update()
                         continue
                 
-                    elif res_project is not None and ws_collision_value == "check":
+                    elif res_project is not None and temp_ws_collision == "check":
                         sly.logger.info(f"Project {project.name} already exists in destination workspace. Checking...")
 
                     meta_json = foreign_api.project.get_meta(project.id)
