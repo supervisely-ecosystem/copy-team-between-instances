@@ -66,6 +66,7 @@ import_progress_4 = Progress(hide_on_finish=True)
 # Entities collapses
 ws_collision_items = [
     RadioGroup.Item(value="ignore", label="Skip projects that already exists"),
+    RadioGroup.Item(value="check", label="Check if items in projects are the same and skip if so"),
     RadioGroup.Item(value="reupload", label="Remove and reupload projects that already exists"),
 ]
 ws_collision = RadioGroup(ws_collision_items, direction="vertical")
@@ -408,7 +409,7 @@ def process_import():
     try:
         # import workspaces
         is_import_all_ws = ws_import_checkbox.is_checked()
-        ignore_ws_collision = ws_collision.get_value() == "ignore"
+        ws_collision_velue = ws_collision.get_value()
         is_fast_mode = ws_options.get_value() == "fast"
         change_link_flag = False
         bucket_path = None
@@ -450,7 +451,7 @@ def process_import():
             import_progress_3,
             import_progress_4,
             is_import_all_ws,
-            ignore_ws_collision,
+            ws_collision_velue,
             is_fast_mode,
             change_link_flag,
             bucket_path,

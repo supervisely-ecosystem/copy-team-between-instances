@@ -53,7 +53,7 @@ def download_upload_images(
 
     res_images = []
     if all([name in existing_images for name in images_names]):
-        sly.logger.info("Images in  batch already exist in destination dataset. Skipping download.")
+        sly.logger.info("Images in  batch already exist in destination dataset. Skipping...")
         return [existing_images[name] for name in images_names]
     elif any([name in existing_images for name in images_names]):
         sly.logger.info("Some images in batch already exist in destination dataset. Downloading only missing images.")
@@ -443,7 +443,7 @@ def import_workspaces(
     progress_ds: Progress,
     progress_items: Progress,
     is_import_all_ws: bool = False,
-    ignore_collision: bool = True,
+    ws_collision_value: str = "check",
     is_fast_mode: bool = False,
     change_link_flag: bool = False,
     bucket_path: str = None,
@@ -498,7 +498,7 @@ def import_workspaces(
                             description=project.description,
                             type=project.type,
                         )
-                    elif res_project is not None and ignore_collision is False:
+                    elif res_project is not None and ws_collision_value == "reupload":
                         api.project.remove(res_project.id)
                         res_project = api.project.create(
                             res_workspace.id,
@@ -506,9 +506,14 @@ def import_workspaces(
                             description=project.description,
                             type=project.type,
                         )
-                    else:  # project exists and ignore_collision is True
+                    
+                    elif res_project is not None and ws_collision_value == "ignore":
+                        sly.logger.info(f"Project {project.name} already exists in destination workspace. Skipping...")
                         pbar_pr.update()
                         continue
+                
+                    elif res_project is not None and ws_collision_value == "check":
+                        sly.logger.info(f"Project {project.name} already exists in destination workspace. Checking...")
 
                     meta_json = foreign_api.project.get_meta(project.id)
                     api.project.update_meta(res_project.id, meta_json)
@@ -525,18 +530,18 @@ def import_workspaces(
                                 res_dataset = api.dataset.create(
                                     res_project.id, dataset.name, description=dataset.description
                                 )
-                                process_func = process_type_map.get(project.type)
-                                process_func(
-                                    api=api,
-                                    foreign_api=foreign_api,
-                                    dataset=dataset,
-                                    res_dataset=res_dataset,
-                                    meta=meta,
-                                    progress_items=progress_items,
-                                    is_fast_mode=is_fast_mode,
-                                    need_change_link=change_link_flag,
-                                    bucket_path=bucket_path,
-                                )
+                            process_func = process_type_map.get(project.type)
+                            process_func(
+                                api=api,
+                                foreign_api=foreign_api,
+                                dataset=dataset,
+                                res_dataset=res_dataset,
+                                meta=meta,
+                                progress_items=progress_items,
+                                is_fast_mode=is_fast_mode,
+                                need_change_link=change_link_flag,
+                                bucket_path=bucket_path,
+                            )
                             pbar_ds.update()
                     pbar_pr.update()
             pbar_ws.update()
