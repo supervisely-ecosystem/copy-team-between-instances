@@ -66,7 +66,7 @@ import_progress_4 = Progress(hide_on_finish=True)
 # Entities collapses
 ws_collision_items = [
     RadioGroup.Item(value="ignore", label="Skip projects that already exists"),
-    RadioGroup.Item(value="check", label="Check if items in projects are the same and skip if so"),
+    RadioGroup.Item(value="check", label="Check if items in projects are the same and skip if so (works only for images projects)"),
     RadioGroup.Item(value="reupload", label="Remove and reupload projects that already exists"),
 ]
 ws_collision = RadioGroup(ws_collision_items, direction="vertical")
@@ -241,8 +241,9 @@ def show_team_stats(datapoint: Table.ClickedDataPoint):
                 project_items.append(project_item)
                 if is_ws_already_exists:
                     if project.name in existing_projects_names:
-                        project_item.disabled = True
-                        existing_project_keys.append(project.id)
+                        if project.type != sly.ProjectType.IMAGES:
+                            project_item.disabled = True
+                            existing_project_keys.append(project.id)
 
             projects_transfer.set_items(project_items)
             if len(existing_project_keys) > 0:

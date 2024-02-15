@@ -493,6 +493,9 @@ def import_workspaces(
             ) as pbar_pr:
                 for project in projects:
                     res_project = api.project.get_info_by_name(res_workspace.id, project.name)
+                    if res_project.type != sly.ProjectType.IMAGES and ws_collision_value == "check":
+                        ws_collision_value = "reupload"
+                        sly.logger.info("Changing collision value to 'reupload' for non-image projects.")
                     if res_project is None:
                         res_project = api.project.create(
                             res_workspace.id,
