@@ -7,3 +7,4 @@ src/debug
 tokens.env
 test.py
 test_lj.py
+__pycache__
