@@ -55,7 +55,7 @@ def download_upload_images(
 
     res_images = []
     if all([name in existing_images for name in images_names]):
-        sly.logger.info("Images in  batch already exist in destination dataset. Skipping...")
+        sly.logger.info("Current batch of images already exist in destination dataset. Skipping...")
         return [existing_images[name] for name in images_names]
     elif any([name in existing_images for name in images_names]):
         sly.logger.info("Some images in batch already exist in destination dataset. Downloading only missing images.")
@@ -493,7 +493,7 @@ def import_workspaces(
             ) as pbar_pr:
                 for project in projects:
                     res_project = api.project.get_info_by_name(res_workspace.id, project.name)
-                    if res_project.type != sly.ProjectType.IMAGES and ws_collision_value == "check":
+                    if res_project is not None and res_project.type != str(sly.ProjectType.IMAGES) and ws_collision_value == "check":
                         ws_collision_value = "reupload"
                         sly.logger.info("Changing collision value to 'reupload' for non-image projects.")
                     if res_project is None:

@@ -241,7 +241,7 @@ def show_team_stats(datapoint: Table.ClickedDataPoint):
                 project_items.append(project_item)
                 if is_ws_already_exists:
                     if project.name in existing_projects_names:
-                        if project.type != sly.ProjectType.IMAGES:
+                        if project.type != str(sly.ProjectType.IMAGES):
                             project_item.disabled = True
                             existing_project_keys.append(project.id)
 
