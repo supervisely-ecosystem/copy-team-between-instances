@@ -1,4 +1,6 @@
+import anyio
 import os
+import time
 from typing import List
 import supervisely as sly
 from urllib.parse import urlparse
@@ -20,6 +22,23 @@ def change_link(bucket_path: str, link: str):
     return f"{bucket_path}{parsed_url.path}"
 
 
+def retyr_if_end_stream(func):
+    # decorator to retry 5 times function if it raises EndOfStream exception
+    def wrapper(*args, **kwargs):
+        for i in range(5):
+            try:
+                return func(*args, **kwargs)
+            except anyio.EndOfStream as e:
+                if i == 4:
+                    raise e
+                sly.logger.warn(f"EndOfStream exception. Retrying... {i + 1}/5")
+                time.sleep(2)
+    
+    return wrapper
+            
+
+
+@retyr_if_end_stream
 def download_upload_images(
     foreign_api: sly.Api,
     api: sly.Api,
@@ -29,18 +48,43 @@ def download_upload_images(
     images_paths: List[str],
     images_names: List[str],
     images_metas: List[dict],
-):
-    foreign_api.image.download_paths(
-        dataset_id=dataset.id,
-        ids=images_ids,
-        paths=images_paths,
-    )
-    res_images = api.image.upload_paths(
-        dataset_id=res_dataset.id,
-        names=images_names,
-        paths=images_paths,
-        metas=images_metas,
-    )
+    existing_images: List[str],
+):  
+    for p in images_paths:
+        silent_remove(p)
+
+    res_images = []
+    if all([name in existing_images for name in images_names]):
+        sly.logger.info("Current batch of images already exist in destination dataset. Skipping...")
+        return [existing_images[name] for name in images_names]
+    elif any([name in existing_images for name in images_names]):
+        sly.logger.info("Some images in batch already exist in destination dataset. Downloading only missing images.")
+        for id, path, name, meta in zip(images_ids, images_paths, images_names, images_metas):
+            if name in existing_images:
+                img = existing_images[name]
+                res_images.append(img)
+            else:
+                foreign_api.image.download_path(id, path)
+                img = api.image.upload_path(
+                    dataset_id=res_dataset.id,
+                    name=name,
+                    path=path,
+                    meta=meta,
+                )
+                silent_remove(path)
+                res_images.append(img)
+    else:
+        foreign_api.image.download_paths(
+            dataset_id=dataset.id,
+            ids=images_ids,
+            paths=images_paths,
+        )
+        res_images = api.image.upload_paths(
+            dataset_id=res_dataset.id,
+            names=images_names,
+            paths=images_paths,
+            metas=images_metas,
+        )
     for p in images_paths:
         silent_remove(p)
     return res_images
@@ -60,6 +104,9 @@ def process_images(
     storage_dir = "storage"
     mkdir(storage_dir, True)
     images: List[ImageInfo] = foreign_api.image.get_list(dataset.id)
+    existing_images = api.image.get_list(res_dataset.id)
+    existing_images = {img.name: img for img in existing_images}
+    
     with progress_items(
         message=f"Importing images from dataset: {dataset.name}", total=len(images)
     ) as pbar:
@@ -113,6 +160,7 @@ def process_images(
                         images_paths,
                         images_names,
                         images_metas,
+                        existing_images,
                     )
             else:
                 res_images = download_upload_images(
@@ -124,6 +172,7 @@ def process_images(
                     images_paths,
                     images_names,
                     images_metas,
+                    existing_images,
                 )
 
             res_images_ids = [image.id for image in res_images]
@@ -396,7 +445,7 @@ def import_workspaces(
     progress_ds: Progress,
     progress_items: Progress,
     is_import_all_ws: bool = False,
-    ignore_collision: bool = True,
+    ws_collision_value: str = "check",
     is_fast_mode: bool = False,
     change_link_flag: bool = False,
     bucket_path: str = None,
@@ -443,7 +492,11 @@ def import_workspaces(
                 message=f"Importing projects from workspace: {workspace.name}", total=len(projects)
             ) as pbar_pr:
                 for project in projects:
+                    temp_ws_collision = ws_collision_value
                     res_project = api.project.get_info_by_name(res_workspace.id, project.name)
+                    if res_project is not None and res_project.type != str(sly.ProjectType.IMAGES) and temp_ws_collision == "check":
+                        temp_ws_collision = "reupload"
+                        sly.logger.info("Changing collision value to 'reupload' for non-image projects.")
                     if res_project is None:
                         res_project = api.project.create(
                             res_workspace.id,
@@ -451,7 +504,7 @@ def import_workspaces(
                             description=project.description,
                             type=project.type,
                         )
-                    elif res_project is not None and ignore_collision is False:
+                    elif res_project is not None and temp_ws_collision == "reupload":
                         api.project.remove(res_project.id)
                         res_project = api.project.create(
                             res_workspace.id,
@@ -459,9 +512,14 @@ def import_workspaces(
                             description=project.description,
                             type=project.type,
                         )
-                    else:  # project exists and ignore_collision is True
+                    
+                    elif res_project is not None and temp_ws_collision == "ignore":
+                        sly.logger.info(f"Project {project.name} already exists in destination workspace. Skipping...")
                         pbar_pr.update()
                         continue
+                
+                    elif res_project is not None and temp_ws_collision == "check":
+                        sly.logger.info(f"Project {project.name} already exists in destination workspace. Checking...")
 
                     meta_json = foreign_api.project.get_meta(project.id)
                     api.project.update_meta(res_project.id, meta_json)
@@ -478,18 +536,18 @@ def import_workspaces(
                                 res_dataset = api.dataset.create(
                                     res_project.id, dataset.name, description=dataset.description
                                 )
-                                process_func = process_type_map.get(project.type)
-                                process_func(
-                                    api=api,
-                                    foreign_api=foreign_api,
-                                    dataset=dataset,
-                                    res_dataset=res_dataset,
-                                    meta=meta,
-                                    progress_items=progress_items,
-                                    is_fast_mode=is_fast_mode,
-                                    need_change_link=change_link_flag,
-                                    bucket_path=bucket_path,
-                                )
+                            process_func = process_type_map.get(project.type)
+                            process_func(
+                                api=api,
+                                foreign_api=foreign_api,
+                                dataset=dataset,
+                                res_dataset=res_dataset,
+                                meta=meta,
+                                progress_items=progress_items,
+                                is_fast_mode=is_fast_mode,
+                                need_change_link=change_link_flag,
+                                bucket_path=bucket_path,
+                            )
                             pbar_ds.update()
                     pbar_pr.update()
             pbar_ws.update()
