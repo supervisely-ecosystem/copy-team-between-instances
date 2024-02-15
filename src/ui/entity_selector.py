@@ -405,83 +405,88 @@ def process_import():
     global team_id, need_password
     output_message.hide()
 
-    # import workspaces
-    is_import_all_ws = ws_import_checkbox.is_checked()
-    ignore_ws_collision = ws_collision.get_value() == "ignore"
-    is_fast_mode = ws_options.get_value() == "fast"
-    change_link_flag = False
-    bucket_path = None
-    if is_fast_mode:
-        change_link_flag = need_link_change.is_checked()
-        bucket_text_value = bucket_text_info.get_value() or ""
-        is_bucket_connected = bool(bucket_text_value.startswith("Connected"))
-        if change_link_flag and not is_bucket_connected:
-            output_message.set(
-                "Please, connect to bucket first or uncheck change link checkbox", status="error"
-            )
-            output_message.show()
-            return
-        else:
-            bucket_path = f"{provider_selector.get_value()}://{bucket_name_input.get_value()}"
+    try:
+        # import workspaces
+        is_import_all_ws = ws_import_checkbox.is_checked()
+        ignore_ws_collision = ws_collision.get_value() == "ignore"
+        is_fast_mode = ws_options.get_value() == "fast"
+        change_link_flag = False
+        bucket_path = None
+        if is_fast_mode:
+            change_link_flag = need_link_change.is_checked()
+            bucket_text_value = bucket_text_info.get_value() or ""
+            is_bucket_connected = bool(bucket_text_value.startswith("Connected"))
+            if change_link_flag and not is_bucket_connected:
+                output_message.set(
+                    "Please, connect to bucket first or uncheck change link checkbox", status="error"
+                )
+                output_message.show()
+                return
+            else:
+                bucket_path = f"{provider_selector.get_value()}://{bucket_name_input.get_value()}"
 
-    default_password = team_members_d_password.get_value()
-    if need_password:
-        if default_password == "" or default_password is None:
-            output_message.set("Please, enter default password for new users", status="error")
-            output_message.show()
-            return
+        default_password = team_members_d_password.get_value()
+        if need_password:
+            if default_password == "" or default_password is None:
+                output_message.set("Please, enter default password for new users", status="error")
+                output_message.show()
+                return
 
-    # pass all validations and start import
-    entities_collapse.set_active_panel(value=[])
+        # pass all validations and start import
+        entities_collapse.set_active_panel(value=[])
 
-    import_progress_1.show()
-    import_progress_2.show()
-    import_progress_3.show()
-    import_progress_4.show()
+        import_progress_1.show()
+        import_progress_2.show()
+        import_progress_3.show()
+        import_progress_4.show()
 
-    import_workspaces(
-        g.api,
-        g.foreign_api,
-        team_id,
-        ws_collapse,
-        import_progress_1,
-        import_progress_2,
-        import_progress_3,
-        import_progress_4,
-        is_import_all_ws,
-        ignore_ws_collision,
-        is_fast_mode,
-        change_link_flag,
-        bucket_path,
-    )
-
-    import_progress_2.hide(), import_progress_3.hide(), import_progress_4.hide()
-    ##################
-
-    # Team Members
-    ignore_users_collision = members_collision.get_value() == "ignore"
-    import_team_members(
-        g.api,
-        g.foreign_api,
-        team_id,
-        members_collapse,
-        default_password,
-        import_progress_1,
-        ignore_users_collision,
-    )
-    ##################
-
-    # Team Files
-    remote_paths = tf_selector.get_selected_items()
-    if len(remote_paths) > 0:
-        import_team_files(
-            g.api, g.foreign_api, team_id, remote_paths, import_progress_1, import_progress_2
+        import_workspaces(
+            g.api,
+            g.foreign_api,
+            team_id,
+            ws_collapse,
+            import_progress_1,
+            import_progress_2,
+            import_progress_3,
+            import_progress_4,
+            is_import_all_ws,
+            ignore_ws_collision,
+            is_fast_mode,
+            change_link_flag,
+            bucket_path,
         )
-    ##################
 
-    output_message.set(text="Data have been successfully imported.", status="success")
-    import_progress_1.hide()
-    import_progress_2.hide()
-    import_progress_3.hide()
-    import_progress_4.hide()
-    output_message.show()
+        import_progress_2.hide(), import_progress_3.hide(), import_progress_4.hide()
+        ##################
+
+        # Team Members
+        ignore_users_collision = members_collision.get_value() == "ignore"
+        import_team_members(
+            g.api,
+            g.foreign_api,
+            team_id,
+            members_collapse,
+            default_password,
+            import_progress_1,
+            ignore_users_collision,
+        )
+        ##################
+
+        # Team Files
+        remote_paths = tf_selector.get_selected_items()
+        if len(remote_paths) > 0:
+            import_team_files(
+                g.api, g.foreign_api, team_id, remote_paths, import_progress_1, import_progress_2
+            )
+        ##################
+
+        output_message.set(text="Data have been successfully imported.", status="success")
+        import_progress_1.hide()
+        import_progress_2.hide()
+        import_progress_3.hide()
+        import_progress_4.hide()
+        output_message.show()
+    except Exception as e:
+        output_message.set(text="Error occurred during. Please restart the app.", status="error")
+        output_message.show()
+        raise e

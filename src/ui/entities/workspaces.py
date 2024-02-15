@@ -1,4 +1,6 @@
+import anyio
 import os
+import time
 from typing import List
 import supervisely as sly
 from urllib.parse import urlparse
@@ -20,6 +22,21 @@ def change_link(bucket_path: str, link: str):
     return f"{bucket_path}{parsed_url.path}"
 
 
+def retyr_if_end_stream(func):
+    # decorator to retry 5 times function if it raises EndOfStream exception
+    def wrapper(*args, **kwargs):
+        for i in range(5):
+            try:
+                return func(*args, **kwargs)
+            except anyio.EndOfStream as e:
+                if i == 4:
+                    raise e
+                sly.logger.warn(f"EndOfStream exception. Retrying... {i + 1}/5")
+                time.sleep(2)
+            
+
+
+@retyr_if_end_stream
 def download_upload_images(
     foreign_api: sly.Api,
     api: sly.Api,
@@ -29,18 +46,43 @@ def download_upload_images(
     images_paths: List[str],
     images_names: List[str],
     images_metas: List[dict],
-):
-    foreign_api.image.download_paths(
-        dataset_id=dataset.id,
-        ids=images_ids,
-        paths=images_paths,
-    )
-    res_images = api.image.upload_paths(
-        dataset_id=res_dataset.id,
-        names=images_names,
-        paths=images_paths,
-        metas=images_metas,
-    )
+    existing_images: List[str],
+):  
+    for p in images_paths:
+        silent_remove(p)
+
+    res_images = []
+    if all([name in existing_images for name in images_names]):
+        sly.logger.info("Images in  batch already exist in destination dataset. Skipping download.")
+        return [existing_images[name] for name in images_names]
+    elif any([name in existing_images for name in images_names]):
+        sly.logger.info("Some images in batch already exist in destination dataset. Downloading only missing images.")
+        for id, path, name, meta in zip(images_ids, images_paths, images_names, images_metas):
+            if name in existing_images:
+                img = existing_images[name]
+                res_images.append(img)
+            else:
+                foreign_api.image.download_path(id, path)
+                img = api.image.upload_path(
+                    dataset_id=res_dataset.id,
+                    name=name,
+                    path=path,
+                    meta=meta,
+                )
+                silent_remove(path)
+                res_images.append(img)
+    else:
+        foreign_api.image.download_paths(
+            dataset_id=dataset.id,
+            ids=images_ids,
+            paths=images_paths,
+        )
+        res_images = api.image.upload_paths(
+            dataset_id=res_dataset.id,
+            names=images_names,
+            paths=images_paths,
+            metas=images_metas,
+        )
     for p in images_paths:
         silent_remove(p)
     return res_images
@@ -60,6 +102,9 @@ def process_images(
     storage_dir = "storage"
     mkdir(storage_dir, True)
     images: List[ImageInfo] = foreign_api.image.get_list(dataset.id)
+    existing_images = api.image.get_list(res_dataset.id)
+    existing_images = {img.name: img for img in existing_images}
+    
     with progress_items(
         message=f"Importing images from dataset: {dataset.name}", total=len(images)
     ) as pbar:
@@ -113,6 +158,7 @@ def process_images(
                         images_paths,
                         images_names,
                         images_metas,
+                        existing_images,
                     )
             else:
                 res_images = download_upload_images(
@@ -124,6 +170,7 @@ def process_images(
                     images_paths,
                     images_names,
                     images_metas,
+                    existing_images,
                 )
 
             res_images_ids = [image.id for image in res_images]
