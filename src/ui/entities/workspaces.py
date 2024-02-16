@@ -77,6 +77,9 @@ def download_upload_images(
     if all([hash is not None for hash in images_hashs]):
         try:
             sly.logger.info("Attempting to upload images by hash.")
+            valid_hashes = api.image.check_existing_hashes(images_hashs)
+            if len(valid_hashes) != len(images_hashs):
+                raise Exception("Some hashes are not valid.")
             res_images = api.image.upload_hashes(
                 dataset_id=res_dataset.id,
                 names=images_names,
@@ -85,7 +88,7 @@ def download_upload_images(
             )
             return res_images
         except Exception as e:
-            sly.logger.info(f"Failed uploading images by hash. Attempting to upload images with paths. {e}")
+            sly.logger.info(f"Failed uploading images by hash. Attempting to upload images with paths.")
 
     foreign_api.image.download_paths(
         dataset_id=dataset.id,
@@ -117,8 +120,10 @@ def process_images(
     storage_dir = "storage"
     mkdir(storage_dir, True)
     images: List[ImageInfo] = foreign_api.image.get_list(dataset.id)
-    existing_images = api.image.get_list(res_dataset.id)
-    existing_images = {img.name: img for img in existing_images}
+    existing_images_list = api.image.get_list(res_dataset.id)
+    existing_images = {}
+    for img in existing_images_list:
+        existing_images[img.name] = img
     
     with progress_items(
         message=f"Importing images from dataset: {dataset.name}", total=len(images)
