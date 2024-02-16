@@ -28,10 +28,10 @@ def retyr_if_end_stream(func):
         for i in range(5):
             try:
                 return func(*args, **kwargs)
-            except anyio.EndOfStream as e:
+            except (anyio.EndOfStream, FileNotFoundError) as e:
                 if i == 4:
                     raise e
-                sly.logger.warn(f"EndOfStream exception. Retrying... {i + 1}/5")
+                sly.logger.warn(f"Error occurred while downloading/uploading images. Retrying... {i + 1}/5")
                 time.sleep(2)
     
     return wrapper
@@ -48,6 +48,7 @@ def download_upload_images(
     images_paths: List[str],
     images_names: List[str],
     images_metas: List[dict],
+    images_hashs: List[str],
     existing_images: List[str],
 ):  
     for p in images_paths:
@@ -73,18 +74,33 @@ def download_upload_images(
                 )
                 silent_remove(path)
                 res_images.append(img)
-    else:
-        foreign_api.image.download_paths(
-            dataset_id=dataset.id,
-            ids=images_ids,
-            paths=images_paths,
-        )
-        res_images = api.image.upload_paths(
-            dataset_id=res_dataset.id,
-            names=images_names,
-            paths=images_paths,
-            metas=images_metas,
-        )
+    if all([hash is not None for hash in images_hashs]):
+        try:
+            sly.logger.info("Attempting to upload images by hash.")
+            valid_hashes = api.image.check_existing_hashes(images_hashs)
+            if len(valid_hashes) != len(images_hashs):
+                raise Exception("Some hashes are not valid.")
+            res_images = api.image.upload_hashes(
+                dataset_id=res_dataset.id,
+                names=images_names,
+                hashes=images_hashs,
+                metas=images_metas,
+            )
+            return res_images
+        except Exception as e:
+            sly.logger.info(f"Failed uploading images by hash. Attempting to upload images with paths.")
+
+    foreign_api.image.download_paths(
+        dataset_id=dataset.id,
+        ids=images_ids,
+        paths=images_paths,
+    )
+    res_images = api.image.upload_paths(
+        dataset_id=res_dataset.id,
+        names=images_names,
+        paths=images_paths,
+        metas=images_metas,
+    )
     for p in images_paths:
         silent_remove(p)
     return res_images
@@ -104,8 +120,10 @@ def process_images(
     storage_dir = "storage"
     mkdir(storage_dir, True)
     images: List[ImageInfo] = foreign_api.image.get_list(dataset.id)
-    existing_images = api.image.get_list(res_dataset.id)
-    existing_images = {img.name: img for img in existing_images}
+    existing_images_list = api.image.get_list(res_dataset.id)
+    existing_images = {}
+    for img in existing_images_list:
+        existing_images[img.name] = img
     
     with progress_items(
         message=f"Importing images from dataset: {dataset.name}", total=len(images)
@@ -115,6 +133,7 @@ def process_images(
             images_names = [image.name for image in images_batch]
             images_metas = [image.meta for image in images_batch]
             images_paths = [os.path.join(storage_dir, image_name) for image_name in images_names]
+            images_hashs = [image.hash for image in images_batch]
 
             images_links = []
             if is_fast_mode:
@@ -160,6 +179,7 @@ def process_images(
                         images_paths,
                         images_names,
                         images_metas,
+                        images_hashs,
                         existing_images,
                     )
             else:
@@ -172,6 +192,7 @@ def process_images(
                     images_paths,
                     images_names,
                     images_metas,
+                    images_hashs,
                     existing_images,
                 )
 
@@ -495,8 +516,8 @@ def import_workspaces(
                     temp_ws_collision = ws_collision_value
                     res_project = api.project.get_info_by_name(res_workspace.id, project.name)
                     if res_project is not None and res_project.type != str(sly.ProjectType.IMAGES) and temp_ws_collision == "check":
-                        temp_ws_collision = "reupload"
-                        sly.logger.info("Changing collision value to 'reupload' for non-image projects.")
+                        temp_ws_collision = "ignore"
+                        sly.logger.info("Changing collision value to 'ignore' for non-image projects.")
                     if res_project is None:
                         res_project = api.project.create(
                             res_workspace.id,
